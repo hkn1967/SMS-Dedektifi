@@ -101,8 +101,8 @@ footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);padd
 <div class="wrap">
   <header>
     <h1>Mesaj Dedektifi</h1>
-    <p class="sub">Şüphelendiğin bir SMS’i yapıştır. Araç, Sahte Mesaj Kontrol Kartı’ndaki işaretleri metnin üzerinde gösterir ve bağlantının asıl alan adını çıkarır. Son kararı sen verirsin.</p>
-    <span class="privacy">● Metin bu sayfadan dışarı gönderilmez; inceleme tarayıcında yapılır.</span>
+    <p class="sub">Şüphelendiğin bir SMS’i yapıştır. Son kararı sen verirsin.</p>
+    <span class="privacy">● Metin bu sayfadan dışarı gönderilmez. İnceleme tarayıcında yapılır.</span>
   </header>
 
   <div class="grid">
@@ -158,7 +158,7 @@ footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);padd
           <li>Bağlantıya tıklama, mesajı yanıtlama.</li>
           <li>Kurumu mesajdaki numaradan değil, kartının arkasındaki ya da resmî sitesindeki numaradan ara.</li>
           <li>Kart bilgisi, şifre ve SMS doğrulama kodunu kimseyle paylaşma.</li>
-          <li>Mesajı bankana ve resmî ihbar kanallarına bildir; bir yakınını uyar.</li>
+          <li>Mesajı bankana ve resmî ihbar kanallarına bildir, bir yakınını uyar.</li>
         </ul>
       </section>
     </div>
@@ -304,7 +304,7 @@ function renderVerdict(){
   const yes=CARD.filter(c=>(c.k in manual)?manual[c.k]:lastAuto.has(c.k));
   const n=yes.filter(c=>c.k!=="bilgi").length, asks=yes.some(c=>c.k==="bilgi");
   $("gauge").textContent=n;
-  if(n>=thr||asks){v.className="verdict high";$("vTitle").textContent="Şüpheli";$("vSub").textContent=asks?"Kod, şifre ya da kart bilgisi isteyen mesajlar tek başına alarm sebebidir.":`${n} uyarı işareti var. Bağlantıya tıklama; kurumu resmî numarasından ara.`;}
+  if(n>=thr||asks){v.className="verdict high";$("vTitle").textContent="Şüpheli";$("vSub").textContent=asks?"Kod, şifre ya da kart bilgisi isteyen mesajlar tek başına alarm sebebidir.":`${n} uyarı işareti var. Bağlantıya tıklama. Kurumu resmî numarasından ara.`;}
   else if(n>=Math.max(1,thr-1)){v.className="verdict mid";$("vTitle").textContent="Dikkatli ol";$("vSub").textContent=`${n} uyarı işareti var. Gerçek mesajlarda da tek tük işaret olabilir; diğer işaretlere ve gönderene bak.`;}
   else {v.className="verdict low";$("vTitle").textContent="Belirgin uyarı işareti yok";$("vSub").textContent="Bu, mesajın güvenli olduğu anlamına gelmez. Beklemediğin bir mesajsa yine kurumu kendin ara.";}
 }

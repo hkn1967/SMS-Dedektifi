@@ -1,6 +1,6 @@
 // İnternetsiz çalışma: uygulama dosyaları ilk açılışta telefona kaydedilir.
 // Dosyaları güncellediğinizde aşağıdaki sürüm numarasını bir artırın (ör. v2).
-const CACHE = "sms-dedektifi-v1";
+const CACHE = "sms-dedektifi-v2";
 const FILES = [
   "./", "./index.html", "./gercek-mi-sahte-mi.html", "./mesaj-dedektifi.html",
   "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png",
