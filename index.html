@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SMS Dedektifi</title>
+<meta name="description" content="Sahte SMS'leri tanımayı öğreten oyun ve kontrol aracı.">
+<meta name="theme-color" content="#2B48C8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SMS Dedektifi">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+:root{--bg:#E9EDF1;--surface:#FFFFFF;--ink:#141B24;--muted:#566170;--line:#C9D1DB;--accent:#2B48C8;--accent-ink:#FFFFFF;--fake:#B8352A;--fake-tint:rgba(184,53,42,.12);--real:#1C7349;--real-tint:rgba(28,115,73,.13);
+  --display:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;--body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F141A;--surface:#18202A;--ink:#E7ECF2;--muted:#9AA6B4;--line:#2B3644;--accent:#8299FF;--accent-ink:#0F141A;--fake:#FF8174;--fake-tint:rgba(255,129,116,.15);--real:#5FD39C;--real-tint:rgba(95,211,156,.14);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F141A;--surface:#18202A;--ink:#E7ECF2;--muted:#9AA6B4;--line:#2B3644;--accent:#8299FF;--accent-ink:#0F141A;--fake:#FF8174;--fake-tint:rgba(255,129,116,.15);--real:#5FD39C;--real-tint:rgba(95,211,156,.14);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);padding:max(20px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom))}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand img{width:52px;height:52px;border-radius:12px}
+h1{font:800 clamp(1.7rem,6vw,2.3rem)/1.05 var(--display);margin:0;letter-spacing:-.01em}
+.sub{margin:4px 0 0;color:var(--muted)}
+.card{display:flex;gap:14px;align-items:center;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;min-height:96px}
+.card:active{transform:scale(.99)}
+.card:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.ic{flex:none;width:56px;height:56px;border-radius:14px;display:grid;place-items:center;font:800 1.5rem var(--display)}
+.ic.g{background:var(--real-tint);color:var(--real)} .ic.d{background:var(--fake-tint);color:var(--fake)}
+.card b{display:block;font:700 1.15rem/1.2 var(--display)}
+.card span.t{color:var(--muted);font-size:.93rem}
+.arrow{margin-left:auto;color:var(--muted);font-size:1.4rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
+.panel h2{font:700 1.05rem var(--display);margin:0 0 8px}
+.panel ol,.panel ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:5px;font-size:.94rem}
+.install{display:none;font:600 1rem var(--body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:14px 18px;cursor:pointer}
+.small{color:var(--muted);font-size:.84rem;margin:0}
+.badge{display:inline-flex;gap:6px;align-items:center;font-size:.8rem;color:var(--real);background:var(--real-tint);border-radius:999px;padding:4px 10px;align-self:flex-start}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="brand">
+    <img src="icons/icon-192.png" alt="">
+    <div>
+      <h1>SMS Dedektifi</h1>
+      <p class="sub">Bu SMS gerçek mi, sahte mi? Öğren ve kontrol et.</p>
+    </div>
+  </header>
+  <span class="badge">● İnternetsiz çalışır, hiçbir veri göndermez</span>
+
+  <a class="card" href="gercek-mi-sahte-mi.html">
+    <div class="ic g">?</div>
+    <div><b>Gerçek mi Sahte mi?</b><span class="t">10 mesajlık oyun. Her cevaptan sonra mesajı ele veren işaretleri gör.</span></div>
+    <div class="arrow" aria-hidden="true">›</div>
+  </a>
+  <a class="card" href="mesaj-dedektifi.html">
+    <div class="ic d">!</div>
+    <div><b>Mesaj Dedektifi</b><span class="t">Şüphelendiğin bir SMS'i yapıştır, kontrol kartının 7 sorusuyla incele.</span></div>
+    <div class="arrow" aria-hidden="true">›</div>
+  </a>
+
+  <button class="install" id="install" type="button">Uygulamayı telefona yükle</button>
+
+  <section class="panel">
+    <h2>Şüpheli bir mesaj geldiyse</h2>
+    <ul>
+      <li>Bağlantıya tıklama, numarayı arama, yanıt verme.</li>
+      <li>Kurumu kendi bildiğin numaradan ya da kendi uygulamasından kontrol et.</li>
+      <li>Şifre ve doğrulama kodunu kimseyle paylaşma.</li>
+      <li>Emin olamazsan bir yakınına göster.</li>
+    </ul>
+  </section>
+
+  <section class="panel" id="howto">
+    <h2>Ana ekrana nasıl eklenir?</h2>
+    <ol>
+      <li><b>Android (Chrome):</b> Sağ üstteki ⋮ menüsünden “Ana ekrana ekle” ya da “Uygulamayı yükle”yi seç.</li>
+      <li><b>iPhone (Safari):</b> Alttaki paylaş düğmesine (□↑) dokun, “Ana Ekrana Ekle”yi seç.</li>
+    </ol>
+    <p class="small" style="margin-top:8px">Bir kez açtıktan sonra uygulama internet olmadan da çalışır.</p>
+  </section>
+</div>
+<script>
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+let deferred = null; const btn = document.getElementById("install");
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; btn.style.display = "block"; });
+btn.addEventListener("click", async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(()=>{}); deferred = null; btn.style.display = "none"; });
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+if (standalone) document.getElementById("howto").hidden = true;
+</script>
+</body>
+</html>

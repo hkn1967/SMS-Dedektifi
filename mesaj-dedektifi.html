@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mesaj Dedektifi</title>
+<meta name="theme-color" content="#2B48C8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SMS Dedektifi">
+
+<style>
+/* Layout: evidence desk — paste box and annotated message on the left, verdict + checklist on the right; stacks on phones. Same family as "Gerçek mi Sahte mi?". */
+:root{
+  --bg:#E9EDF1; --surface:#FFFFFF; --ink:#141B24; --muted:#566170; --line:#C9D1DB;
+  --accent:#2B48C8; --accent-ink:#FFFFFF; --sunk:#F2F5F8;
+  --fake:#B8352A; --fake-tint:rgba(184,53,42,.13); --warn:#9A6200; --warn-tint:rgba(214,146,20,.16);
+  --real:#1C7349; --real-tint:rgba(28,115,73,.14);
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F141A; --surface:#18202A; --ink:#E7ECF2; --muted:#9AA6B4; --line:#2B3644;
+  --accent:#8299FF; --accent-ink:#0F141A; --sunk:#121921;
+  --fake:#FF8174; --fake-tint:rgba(255,129,116,.16); --warn:#F2BE55; --warn-tint:rgba(242,190,85,.15);
+  --real:#5FD39C; --real-tint:rgba(95,211,156,.15); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F141A; --surface:#18202A; --ink:#E7ECF2; --muted:#9AA6B4; --line:#2B3644;
+  --accent:#8299FF; --accent-ink:#0F141A; --sunk:#121921;
+  --fake:#FF8174; --fake-tint:rgba(255,129,116,.16); --warn:#F2BE55; --warn-tint:rgba(242,190,85,.15);
+  --real:#5FD39C; --real-tint:rgba(95,211,156,.15); color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;padding-inline:16px;padding-block:20px 32px}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,4.5vw,2.8rem);line-height:1;margin:0;letter-spacing:-.01em}
+.sub{margin:6px 0 0;color:var(--muted);max-width:62ch}
+.privacy{display:inline-flex;gap:8px;align-items:center;font:500 .8rem var(--mono);color:var(--real);background:var(--real-tint);border-radius:999px;padding:5px 12px;margin-top:10px}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font-family:var(--display);font-weight:600;font-size:1.2rem;margin:0}
+.eyebrow{font:700 .72rem/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+textarea{width:100%;min-height:150px;resize:vertical;font:400 1rem/1.5 var(--body);color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+textarea:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font:500 .82rem var(--body);border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip:hover{border-color:var(--accent)}
+.ghost{font:500 .82rem var(--body);background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:6px}
+.annot{background:var(--sunk);border-radius:12px;padding:14px 16px;font-size:1.02rem;line-height:1.6;overflow-wrap:anywhere;min-height:3em;white-space:pre-wrap}
+.annot .empty{color:var(--muted)}
+mark{background:none;color:inherit;border-radius:4px;padding:0 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone;cursor:help}
+mark.w{background:var(--fake-tint);box-shadow:inset 0 -2px 0 var(--fake)}
+mark.i{background:var(--warn-tint);box-shadow:inset 0 -2px 0 var(--warn)}
+mark.t{background:var(--real-tint);box-shadow:inset 0 -2px 0 var(--real)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sw.w{background:var(--fake)} .sw.i{background:var(--warn)} .sw.t{background:var(--real)}
+.domains{display:flex;flex-direction:column;gap:8px}
+.dom{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;background:var(--sunk);border-radius:10px;padding:10px 12px}
+.dom code{font:500 .85rem var(--mono);overflow-wrap:anywhere}
+.dom .real-dom{font:700 1rem var(--mono)}
+.dom small{color:var(--muted)}
+
+/* verdict */
+.verdict{border-radius:14px;padding:18px;display:flex;gap:16px;align-items:center}
+.verdict.low{background:var(--real-tint)} .verdict.mid{background:var(--warn-tint)} .verdict.high{background:var(--fake-tint)} .verdict.none{background:var(--sunk)}
+.gauge{font:800 2.6rem/1 var(--display);font-variant-numeric:tabular-nums;min-width:2.2ch;text-align:center}
+.verdict.low .gauge{color:var(--real)} .verdict.mid .gauge{color:var(--warn)} .verdict.high .gauge{color:var(--fake)} .verdict.none .gauge{color:var(--muted)}
+.vtext b{display:block;font-family:var(--display);font-size:1.25rem;line-height:1.2}
+.vtext span{font-size:.9rem;color:var(--muted)}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.checks label{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px;border-radius:8px;cursor:pointer}
+.checks label:hover{background:var(--sunk)}
+.checks input{width:18px;height:18px;margin-top:2px;accent-color:var(--fake)}
+.auto{font:500 .68rem var(--mono);color:var(--muted);white-space:nowrap;padding-top:4px}
+.auto.on{color:var(--fake)}
+.thr{display:flex;align-items:center;gap:10px;font-size:.88rem;color:var(--muted);flex-wrap:wrap}
+.thr input{accent-color:var(--accent)}
+.thr b{font-family:var(--mono);color:var(--ink)}
+.tips{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:600}
+.codes{overflow-x:auto}
+.codes table{border-collapse:collapse;font:500 .8rem var(--mono);font-variant-numeric:tabular-nums}
+.codes th,.codes td{border:1px solid var(--line);padding:5px 7px;text-align:center}
+.codes th{background:var(--sunk);font-weight:700}
+.cta{font:600 .9rem/1 var(--body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:11px 16px;cursor:pointer}
+.small{font-size:.84rem;color:var(--muted);margin:0}
+footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);padding-top:14px;display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+</style>
+</head>
+<body>
+<a href="index.html" class="homelink" style="display:inline-flex;align-items:center;gap:6px;font:600 .9rem system-ui,sans-serif;color:var(--accent);text-decoration:none;margin:0 auto 12px;max-width:1100px;width:100%;padding-top:env(safe-area-inset-top)">‹ Ana ekran</a>
+<div class="wrap">
+  <header>
+    <h1>Mesaj Dedektifi</h1>
+    <p class="sub">Şüphelendiğin bir SMS’i yapıştır. Araç, Sahte Mesaj Kontrol Kartı’ndaki işaretleri metnin üzerinde gösterir ve bağlantının asıl alan adını çıkarır. Son kararı sen verirsin.</p>
+    <span class="privacy">● Metin bu sayfadan dışarı gönderilmez; inceleme tarayıcında yapılır.</span>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="panel">
+        <label class="eyebrow" for="snd">Gönderen (ekranın üstünde yazan ad ya da numara)</label>
+        <input id="snd" type="text" autocomplete="off" placeholder="ör. ANKABANK, +90 5XX …, xyz@icloud.com" style="width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);margin-bottom:12px">
+        <label class="eyebrow" for="msg">Mesaj metni</label>
+        <textarea id="msg" placeholder="Mesajı buraya yapıştır. Ad, numara ve kart bilgisi gibi kişisel bilgileri silmeyi unutma."></textarea>
+        <div class="row">
+          <span class="small">Örnekler (kurgusal):</span>
+          <button class="chip" data-ex="0" type="button">Kargo</button>
+          <button class="chip" data-ex="1" type="button">Banka</button>
+          <button class="chip" data-ex="2" type="button">Hukuk dosyası</button>
+          <button class="chip" data-ex="3" type="button">Gerçek banka bildirimi</button>
+          <button class="ghost" id="clear" type="button">Temizle</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>İşaretlenmiş mesaj</h2>
+        <div class="annot" id="annot"><span class="empty">Mesaj yapıştırınca işaretler burada görünür.</span></div>
+        <div class="legend">
+          <span><i class="sw w"></i>Kontrol kartındaki uyarı işareti</span>
+          <span><i class="sw i"></i>Yanıltıcı ya da ek özellik (tek başına karar verdirmez)</span>
+          <span><i class="sw t"></i>Güven işareti</span>
+        </div>
+        <div id="domWrap" hidden>
+          <div class="eyebrow" style="margin-bottom:8px">Bağlantılar: alan adını sağdan oku</div>
+          <div class="domains" id="domains"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel">
+        <div class="verdict none" id="verdict">
+          <div class="gauge" id="gauge">–</div>
+          <div class="vtext"><b id="vTitle">Henüz mesaj yok</b><span id="vSub">Kontrol kartındaki 7 sorudan kaçına “evet” dendiğini gösterir.</span></div>
+        </div>
+        <ul class="checks" id="checks"></ul>
+        <div class="thr">
+          <label for="thr">Şüpheli eşiği:</label>
+          <input type="range" id="thr" min="2" max="5" step="1" value="3">
+          <span><b id="thrVal">3</b> veya daha fazla “evet”</span>
+        </div>
+        
+      </section>
+
+      <section class="panel">
+        <h2>Şüpheliyse ne yapmalı?</h2>
+        <ul class="tips">
+          <li>Bağlantıya tıklama, mesajı yanıtlama.</li>
+          <li>Kurumu mesajdaki numaradan değil, kartının arkasındaki ya da resmî sitesindeki numaradan ara.</li>
+          <li>Kart bilgisi, şifre ve SMS doğrulama kodunu kimseyle paylaşma.</li>
+          <li>Mesajı bankana ve resmî ihbar kanallarına bildir; bir yakınını uyar.</li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span>Bu araç bir öğrenme yardımcısıdır, dolandırıcılık filtresi değildir. “Uyarı işareti yok” sonucu mesajın güvenli olduğu anlamına gelmez.</span>
+  </footer>
+</div>
+
+<script>
+const EXAMPLES=[
+ {s:"+90 5XX 482 17 06", x:"Pusula Kargo: koliniz adres eksikligi nedeniyle iade edilecektir.Tekrar gonderim icin adresinizi guncelleyiniz: pusula-teslimat.info/tr7"},
+ {s:"ANKA BNK", x:"[Anka Bank] Hesabınıza yetkisiz giriş tespit edildi, hesabınız askıya alındı. Hesabınızı onaylamak için giriş yapın: anka-bank-onay.com"},
+ {s:"LALEREKLAM", x:"Sn. Elif Yılmaz dosyanizin son gunudur. Magdur olmamak icin 17:00'a kadar arayiniz. Akasya Hukuk: 0216 555 12 34 RED yaz 4609 a gonder B251"},
+ {s:"ANKABANK", x:"Sayın Mert K., **4417 ile biten kartınızla 01.10.2026 tarihinde 1.249,90 TL harcama yapıldı. İşlem size ait değilse kartınızın arkasındaki numaradan bizi arayın. B002"}
+];
+// Card questions (kontrol kartı) — key -> question
+const CARD=[
+ {k:"belirsiz", q:"Ne olduğu belli değil mi? (hangi dosya, hangi sipariş, ne kadar borç)"},
+ {k:"tehdit", q:"Kayıpla ya da cezayla korkutuyor mu?"},
+ {k:"gonderen", q:"Gönderen adı kurumla uyuşmuyor mu? (kişi adı, ilgisiz şirket, cep ya da yabancı numara)"},
+ {k:"telefon", q:"Bir numarayı aramanızı mı istiyor?"},
+ {k:"emir", q:"Hemen bir şey yapmanızı mı istiyor? (tıklayın, arayın, giriş yapın)"},
+ {k:"yazim", q:"Yazım hatası ya da bozuk marka adı var mı?"},
+ {k:"buyuk", q:"Gereksiz BÜYÜK HARF var mı?"},
+ {k:"bilgi", q:"Şifre, doğrulama kodu ya da kart bilgisi istiyor mu? (tek başına yeterli)"}
+];
+const SCORED=CARD.filter(c=>c.k!=="bilgi").map(c=>c.k);
+const LABEL={gonderen:"Gönderen uyuşmuyor",telefon:"Numarayı aratıyor",yazim:"Yazım hatası / bozuk ad",ret:"Ret ifadesi",mersis:"MERSİS",acil:"Aciliyet",tehdit:"Tehdit / kayıp",hitap:"Kalıp hitap",belirsiz:"Belirsiz bilgi",karakter:"Türkçe karakter / yazım",
+ baglanti:"Şüpheli bağlantı",odul:"Ödül vaadi",bilgi:"Kod / bilgi istiyor",emir:"Hemen bir şey yaptırıyor",kosul:"Koşul yapısı",buyuk:"Büyük harf / ünlem",
+ resmi:"Resmî üslup",gizli:"Gizlilik baskısı",ad:"Adla hitap",somut:"Somut bilgi",uyari:"Güvenlik uyarısı",kanal:"Resmî kanala yönlendirme",link:"Bağlantı"};
+const CARDKEYS=new Set(CARD.map(c=>c.k));
+const TRUST=new Set(["ad","somut","uyari","kanal","ret","mersis"]);
+
+// Turkish-aware lowercase + fold to ASCII, length-preserving
+const MAP={"ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"u","â":"a","î":"i","û":"u"};
+const lowerTr=s=>Array.from(s).map(ch=>{const l=ch.toLocaleLowerCase("tr");return l.length===1?l:ch.toLowerCase().charAt(0)}).join("");
+const fold=s=>Array.from(lowerTr(s)).map(c=>MAP[c]||c).join("");
+
+const L="(?<![a-z0-9])", R="(?![a-z0-9])";
+const RULES=[
+ // [type, regex on folded text]
+ ["bilgi", /kart (bilgi|numara)\w*|cvv|son kullanma tarih\w*|tc kimlik\w*|kimlik numara\w*|dogrulama kod\w*|(sms ile )?gelen kod\w*|kodu (bu numaraya|temsilci\w*|bize|gonder\w*|ilet\w*)|sifre\w* (gir\w*|gonder\w*|ilet\w*|yaz\w*)(?! ?ma)/g],
+ ["telefon", new RegExp(L+"(ara(yin|yiniz|yabilirsiniz)|iletisime gec\\w*|irtibata gec\\w*|bizi arayin)"+R+"|(?<!\\d)(0 ?\\(?[2-9]\\d{2}\\)? ?\\d{3} ?\\d{2} ?\\d{2}|444 ?\\d ?\\d{3}|444 ?\\d{2} ?\\d{2})(?!\\d)","g")],
+ ["ret", /(sms|ileti|bildirim|mesaj)\w*[^.]{0,40}(istemiyor|iptal|ret\b|cikis)\w*[^.]*|(?<![a-z])(ret|red|iptal|cikis|cks)\w*[\s:;"'“”]*(icin)?[\s:"'“”]*[a-z0-9 ]{0,20}(yaz|->)\w*[^.]*|sms ?ret\s*:[^.]*/g],
+ ["mersis", /mersis\w*\s*(no)?\s*:?\s*\d{10,}|(?<![a-z])(mn|ms|m)\s*:\s*\d{12,}/g],
+ ["gizli", /kimseye (soyleme|bahsetme|soylemeyin)\w*|aramizda kalsin/g],
+ ["tehdit", /bloke\w*|durdur\w*|tahsil edilece\w*|teslim edileme\w*|magdur ol\w*|magduriyet\w*|son gunu\w*|devredil\w*|yasal takip\w*|kisitla\w*|askiya al\w*|iptal edil\w*|iade edil\w*|kapatil\w*|kapatila\w*|durdurul\w*|yasal islem\w*|icra\w*|ceza\w*|silinece\w*|dondurul\w*|(hesab|kart|hatt)\w* (kapan|kilitlen)\w*|kilitlen\w*/g],
+ ["acil", new RegExp(L+"(hemen|derhal|acil|acilen|simdi|son gun\\w*|son saat\\w*|son firsat|bugun|en gec|kacirma\\w*|\\d+ (saat|dakika) (icinde|icerisinde)|\\d+ gun icinde|ilk \\d+ kisi\\w*|sinirli (sure|sayida)\\w*)"+R,"g")],
+ ["odul", /kazandin\w*|kazandiniz|hediye\w*|odul\w*|bedava|ucretsiz|cekilis\w*|tebrik\w*|bonus\w*|\d[\d.,]* ?tl (vergi )?iade\w*|iade(niz)? tanimlan\w*|para iade\w*/g],
+ ["hitap", /(sayin|degerli|sevgili|kiymetli) (musteri|abone|uye|kullanici|vatandas)\w*|musterimiz\w*/g],
+ ["resmi", /ilgili mevzuat\w*|kanun geregi|yasal sure\w*|tebligat\w*|hukuki (surec|islem)\w*|resmi bildirim\w*|ihtar\w*/g],
+ ["kosul", new RegExp(L+"(aksi (halde|takdirde)|\\w+(mazsaniz|mezseniz|mazsan|mezsen|mazsa|mezse))"+R,"g")],
+ ["emir", new RegExp(L+"((tikla|gir|guncelle|dogrula|ode|ilet|onayla|basvur|tamamla|yukle|indir|sorgula|giris yap|aktiflestir|al|ara|kontrol ed|edin|gec|yap|kaldir|guncell)(in|iniz|yin|yiniz)|gonderin|derhal odeyin)"+R,"g")],
+ ["uyari", /kimseyle paylasma\w*|kimseye vermeyin|kimseyle paylasmayin|banka calisanlari dahil/g],
+ ["kanal", /kartinizin arkasindaki\w*|resmi (internet )?sitesi\w*|uygulamasi(ndan|nda)|kendiniz yazin|subemiz\w*|subesinden|ret yazip/g],
+ ["somut", /\*+\d{2,4}|\d{2,4}\*+|\d+(\.\d{3})*,\d{2} ?tl|\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}[:.]\d{2}-\d{1,2}[:.]\d{2}/g]
+];
+// words written without Turkish characters (checked on lowercase original, not folded)
+const NO_TR = /(?<![a-zçğıöşü])(musteri\w*|odeme\w*|guncell\w*|icin|gonder\w*|gonderi\w*|tikla\w*|sifre\w*|dogrula\w*|lutfen|islem\w*|cekilis\w*|hesabiniz\w*|kartiniz\w*|adiniz\w*|tanimlan\w*|kazandiniz|alisveris\w*|gecerli\w*|kisitla\w*|eksikligi|odul\w*|ucret\w*|guvenlik\w*|bugun|gun|son gun|kisi|iadeniz\w*|hizmetiniz|lazim|musait\w*)(?![a-zçğıöşü])/g;
+const SHORT = ["bit.ly","kisa.lnk","tinyurl.com","t.ly","cutt.ly","rb.gy","is.gd","goo.gl","shorturl.at","s.id","t.co","ow.ly"];
+const RISKY_TLD = ["xyz","top","info","click","site","online","live","icu","shop","vip","buzz","link","lnk","cc"];
+const SLD2 = ["com.tr","gov.tr","org.tr","net.tr","edu.tr","gen.tr","bel.tr","av.tr","k12.tr","co.uk"];
+
+function regDomain(host){
+  const parts=host.split(".");
+  const last2=parts.slice(-2).join(".");
+  return (SLD2.includes(last2) && parts.length>=3) ? parts.slice(-3).join(".") : last2;
+}
+let senderText="";
+function senderSuspicious(sn){ sn=(sn||"").trim(); if(!sn) return false;
+  return /^\+|^0\s?\(?[1-9]|^\d[\d\s()-]{7,}$/.test(sn) || /@/.test(sn); }
+function analyze(text){
+  const f=fold(text), lo=lowerTr(text), spans=[];
+  RULES.forEach(([t,re])=>{ re.lastIndex=0; let m; while((m=re.exec(f))){ if(!m[0]) {re.lastIndex++;continue} spans.push({a:m.index,b:m.index+m[0].length,t}); } });
+  NO_TR.lastIndex=0; let m; while((m=NO_TR.exec(lo))) spans.push({a:m.index,b:m.index+m[0].length,t:"karakter"});
+  // ALL CAPS words (4+) and !!
+  const caps=/(?<![A-Za-zÇĞİÖŞÜçğıöşü])[A-ZÇĞİÖŞÜ]{4,}(?![A-Za-zÇĞİÖŞÜçğıöşü])/g; const okCaps=new Set(["IBAN","SMS","KDV","PTT","HGS","OGS","ATM","MERSIS","MERSİS","TTNET","MASAK","USDT"]);
+  while((m=caps.exec(text))){ if(!okCaps.has(m[0])) spans.push({a:m.index,b:m.index+m[0].length,t:"buyuk"}); }
+  const ex=/!{2,}/g; while((m=ex.exec(text))) spans.push({a:m.index,b:m.index+m[0].length,t:"buyuk"});
+  // name after Sayın
+  const nm=/(Sayın|Sayin|SAYIN|Değerli|Sevgili)\s+([A-ZÇĞİÖŞÜ][a-zçğıöşü]+)(\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]*\.?)?/g;
+  while((m=nm.exec(text))){ if(!/^(Müşteri|Musteri|Abone|Üye|Uye|Kullanıcı|Kullanici|Vatandaş)/.test(m[2])) spans.push({a:m.index,b:m.index+m[0].length,t:"ad"}); }
+  // links
+  const links=[]; const lr=/(https?:\/\/)?((?:[a-z0-9-]+\.)+[a-z]{2,})(\/[^\s]*)?/gi;
+  while((m=lr.exec(text))){
+    if(/^\d/.test(m[2]) && !m[1]) continue;
+    const host=m[2].toLowerCase(); const tld=host.split(".").pop();
+    if(!/[a-z]/.test(tld)) continue;
+    const reg=regDomain(host); let kind="R", why="";
+    if(SHORT.some(s=>host===s||host.endsWith("."+s))){kind="K"; why="Kısaltılmış bağlantı: nereye gittiği görünmüyor.";}
+    else if(host.endsWith(".gov.tr")){kind="R"; why="“.gov.tr” resmî kurum uzantısıdır. Yine de adresi tarayıcına kendin yazman en güvenlisi.";}
+    else if(/-/.test(reg) || RISKY_TLD.includes(tld) || host.split(".").length>reg.split(".").length){kind="B"; why=host.split(".").length>reg.split(".").length&&!/-/.test(reg)&&!RISKY_TLD.includes(tld)?"Asıl alan adı en sağdaki kısımdır; soldaki sözcükler sadece süs olabilir.":"Kurum adına benzeyen ama farklı bir alan adı olabilir.";}
+    else {kind="?"; why="Bu alan adı gerçekten kuruma mı ait? Kurumun resmî sitesindeki adresle karşılaştır.";}
+    links.push({a:m.index,b:m.index+m[0].length,full:m[0],host,reg,kind,why});
+    spans.push({a:m.index,b:m.index+m[0].length,t:(kind==="K"||kind==="B")?"baglanti":"link"});
+  }
+  // yazım: missing space after punctuation, dotted / symbol-broken brand names, " !"
+  { const yz=[/[a-zçğıöşü]{2,}[.,;:!][a-zA-ZÇĞİÖŞÜçğıöşü]{2,}/g, /(?:[A-ZÇĞİÖŞÜ][.,]\s?){3,}[A-ZÇĞİÖŞÜ]?/g, /\s!(?=\s|$)/g, /[A-Za-z]+[0-9£$€][A-Za-z]+/g, /[A-Za-z]{2,}£/g, /(?<![a-z0-9])[a-z]+\.[a-z]+(?=\s)/g];
+    yz.forEach((re,i)=>{ let x; while((x=re.exec(text))){ const seg=x[0]; if(i===0 && /(\.[a-z]{2,3}($|\/))|https?/.test(text.slice(x.index,x.index+seg.length+6))) continue; if(i===5) continue; spans.push({a:x.index,b:x.index+seg.length,t:"yazim"}); } }); }
+  // family / acquaintance impersonation
+  { const fr=/yeni numaram\w*|numaram degisti|telefonum (bozuldu|kayboldu|calindi)/g; let x; while((x=fr.exec(f))) spans.push({a:x.index,b:x.index+x[0].length,t:"belirsiz"}); }
+  // drop hits that sit inside a link, and card hits inside the commercial opt-out phrase
+  const rets=spans.filter(s=>s.t==="ret");
+  // "kartınızın arkasındaki numaradan arayın" = own channel, not a number in the message
+  if(spans.some(s=>s.t==="kanal") && !spans.some(s=>s.t==="telefon" && /\d/.test(text.slice(s.a,s.b)))) for(let i=spans.length-1;i>=0;i--) if(spans[i].t==="telefon") spans.splice(i,1);
+  for(let i=spans.length-1;i>=0;i--){ const s=spans[i];
+    if(["karakter","yazim","buyuk","emir"].includes(s.t) && links.some(l=>s.a<l.b&&l.a<s.b)) {spans.splice(i,1);continue}
+    if(["emir","telefon","kosul","buyuk","yazim"].includes(s.t) && rets.some(r=>s.a>=r.a&&s.b<=r.b)) spans.splice(i,1); }
+  // belirsiz: subject words without any number
+  const ref=text.replace(/https?:\/\/\S+|(?:[a-z0-9-]+\.)+[a-z]{2,}\/?\S*/gi," ").replace(/mersis\w*\s*(no)?\s*:?\s*\d+|\b(MN|MS|M)\s*:\s*\d+|\bB\d{3}\b/gi," ").replace(/(?<!\d)(0 ?\(?\d{3}\)? ?\d{3} ?\d{2} ?\d{2}|444 ?\d[ \d]{3,5})(?!\d)/g," ");
+  const hasNum=/\d{6,}|\*{2,}\d+|\d+\*{2,}|\d{1,2}[.\/]\d{1,2}[.\/]\d{2,4}/.test(ref);
+  if(!hasNum){ const br=/(kargonuz|koliniz|gonderiniz|paketiniz|siparisiniz|hesabiniz|kartiniz|supheli islem|dosyaniz|evraklariniz|ceza dosya|tahkim belge|varliklari|iadeniz|borcunuz|yetkisiz giris)\w*/g; let b=br.exec(f); if(b) spans.push({a:b.index,b:b.index+b[0].length,t:"belirsiz"}); }
+  // "uyari" overrides false "bilgi" (e.g. 'şifrenizi kimseyle paylaşmayın')
+  const hasUyari=spans.some(s=>s.t==="uyari");
+  const out=spans.filter(s=>!(hasUyari && s.t==="bilgi" && !/kart|cvv|kimlik/.test(f.slice(s.a,s.b))));
+  const found=new Set(out.map(s=>s.t));
+  if(senderSuspicious(senderText)) found.add("gonderen");
+  return {spans:out, links, found};
+}
+const PRIORITY=["bilgi","ret","mersis","telefon","yazim","baglanti","link","tehdit","acil","odul","gizli","hitap","ad","kosul","resmi","belirsiz","uyari","kanal","somut","karakter","buyuk","emir"];
+function resolve(spans){
+  const placed=[]; const sorted=spans.slice().sort((x,y)=>PRIORITY.indexOf(x.t)-PRIORITY.indexOf(y.t)||(y.b-y.a)-(x.b-x.a));
+  sorted.forEach(s=>{ if(!placed.some(p=>s.a<p.b&&p.a<s.b)) placed.push(s); });
+  return placed.sort((x,y)=>x.a-y.a);
+}
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const $=id=>document.getElementById(id);
+let manual={}; let lastText=""; let lastAuto=new Set(); let lastLinks=[];
+
+function renderChecks(auto){
+  $("checks").innerHTML=CARD.map((c,i)=>{
+    const a=auto.has(c.k); const on=(c.k in manual)?manual[c.k]:a;
+    return `<li><label for="c${i}"><input type="checkbox" id="c${i}" data-k="${c.k}" ${on?"checked":""}><span>${c.q}</span><span class="auto ${a?"on":""}">${a?"otomatik":""}</span></label></li>`;
+  }).join("");
+  $("checks").querySelectorAll("input").forEach(inp=>inp.onchange=()=>{manual[inp.dataset.k]=inp.checked; renderVerdict();});
+}
+function renderVerdict(){
+  const v=$("verdict"), thr=+$("thr").value; $("thrVal").textContent=thr;
+  if(!lastText.trim()){v.className="verdict none";$("gauge").textContent="–";$("vTitle").textContent="Henüz mesaj yok";$("vSub").textContent="Kontrol kartındaki 7 sorudan kaçına “evet” dendiğini gösterir.";return}
+  const yes=CARD.filter(c=>(c.k in manual)?manual[c.k]:lastAuto.has(c.k));
+  const n=yes.filter(c=>c.k!=="bilgi").length, asks=yes.some(c=>c.k==="bilgi");
+  $("gauge").textContent=n;
+  if(n>=thr||asks){v.className="verdict high";$("vTitle").textContent="Şüpheli";$("vSub").textContent=asks?"Kod, şifre ya da kart bilgisi isteyen mesajlar tek başına alarm sebebidir.":`${n} uyarı işareti var. Bağlantıya tıklama; kurumu resmî numarasından ara.`;}
+  else if(n>=Math.max(1,thr-1)){v.className="verdict mid";$("vTitle").textContent="Dikkatli ol";$("vSub").textContent=`${n} uyarı işareti var. Gerçek mesajlarda da tek tük işaret olabilir; diğer işaretlere ve gönderene bak.`;}
+  else {v.className="verdict low";$("vTitle").textContent="Belirgin uyarı işareti yok";$("vSub").textContent="Bu, mesajın güvenli olduğu anlamına gelmez. Beklemediğin bir mesajsa yine kurumu kendin ara.";}
+}
+function run(){
+  const text=$("msg").value; lastText=text; senderText=$("snd").value;
+  const key=senderText+"\u0000"+text;
+  if(key!==run._prev){manual={}; run._prev=key;}
+  if(!text.trim()){ $("annot").innerHTML='<span class="empty">Mesaj yapıştırınca işaretler burada görünür.</span>'; $("domWrap").hidden=true; lastAuto=new Set(); lastLinks=[]; renderChecks(lastAuto); renderVerdict(); return; }
+  const r=analyze(text); lastAuto=r.found; lastLinks=r.links;
+  const placed=resolve(r.spans); let html="",pos=0;
+  placed.forEach(s=>{ html+=esc(text.slice(pos,s.a)); const cls=TRUST.has(s.t)?"t":(CARDKEYS.has(s.t)?"w":"i"); html+=`<mark class="${cls}" title="${LABEL[s.t]}">${esc(text.slice(s.a,s.b))}</mark>`; pos=s.b; });
+  html+=esc(text.slice(pos)); $("annot").innerHTML=html;
+  if(r.links.length){ $("domWrap").hidden=false;
+    $("domains").innerHTML=r.links.map(l=>`<div class="dom"><code>${esc(l.full)}</code><span>Asıl alan adı: <span class="real-dom">${esc(l.reg)}</span></span><small>${esc(l.why)}</small></div>`).join("");
+  } else $("domWrap").hidden=true;
+  renderChecks(lastAuto); renderVerdict();
+}
+let t; $("msg").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(run,150)});
+$("snd").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(run,150)});
+document.querySelectorAll("[data-ex]").forEach(b=>b.onclick=()=>{const e=EXAMPLES[+b.dataset.ex]; $("snd").value=e.s; $("msg").value=e.x; run();});
+$("clear").onclick=()=>{$("msg").value="";$("snd").value="";run();$("msg").focus()};
+$("thr").oninput=renderVerdict;
+try{const v=localStorage.getItem("md-thr"); if(v) $("thr").value=v;}catch(e){}
+$("thr").addEventListener("change",()=>{try{localStorage.setItem("md-thr",$("thr").value)}catch(e){}});
+// open with a sample so the tool shows what it does
+$("snd").value=EXAMPLES[0].s; $("msg").value=EXAMPLES[0].x; run();
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}</script>
+</body>
+</html>

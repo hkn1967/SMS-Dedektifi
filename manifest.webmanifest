@@ -1,0 +1,17 @@
+{
+  "name": "SMS Dedektifi: Gerçek mi Sahte mi?",
+  "short_name": "SMS Dedektifi",
+  "description": "Sahte SMS'leri tanımayı öğreten oyun ve kontrol aracı. İnternetsiz çalışır; hiçbir veri göndermez.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E9EDF1",
+  "theme_color": "#2B48C8",
+  "icons": [
+    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

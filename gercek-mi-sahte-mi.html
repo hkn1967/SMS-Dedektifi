@@ -1,0 +1,790 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Gerçek mi Sahte mi?</title>
+<meta name="theme-color" content="#2B48C8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SMS Dedektifi">
+
+<style>
+/* Layout: phone mockup on the left as the "evidence", verdict panel on the right; stacks on phones. Rubber-stamp verdict is the one bold moment. */
+:root{
+  --bg:#E9EDF1; --surface:#FFFFFF; --ink:#141B24; --muted:#566170; --line:#C9D1DB;
+  --accent:#2B48C8; --accent-ink:#FFFFFF;
+  --fake:#B8352A; --fake-tint:rgba(184,53,42,.13); --real:#1C7349; --real-tint:rgba(28,115,73,.14); --amb:#8A5A00; --amb-tint:rgba(214,150,20,.18);
+  --bubble:#E2E7EE; --phone:#1A222C; --phone-screen:#F7F9FB;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F141A; --surface:#18202A; --ink:#E7ECF2; --muted:#9AA6B4; --line:#2B3644;
+  --accent:#8299FF; --accent-ink:#0F141A;
+  --fake:#FF8174; --fake-tint:rgba(255,129,116,.16); --real:#5FD39C; --real-tint:rgba(95,211,156,.15); --amb:#F2C063; --amb-tint:rgba(242,192,99,.16);
+  --bubble:#26313E; --phone:#05080B; --phone-screen:#121921; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F141A; --surface:#18202A; --ink:#E7ECF2; --muted:#9AA6B4; --line:#2B3644;
+  --accent:#8299FF; --accent-ink:#0F141A;
+  --fake:#FF8174; --fake-tint:rgba(255,129,116,.16); --real:#5FD39C; --real-tint:rgba(95,211,156,.15); --amb:#F2C063; --amb-tint:rgba(242,192,99,.16);
+  --bubble:#26313E; --phone:#05080B; --phone-screen:#121921; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;padding-inline:16px;padding-block:20px 32px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.9rem,4.5vw,2.8rem);line-height:1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 .q{color:var(--accent)}
+.sub{margin:6px 0 0;color:var(--muted);max-width:52ch}
+.meter{display:flex;gap:18px;font-family:var(--mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter b{display:block;font-size:1.35rem;color:var(--ink);font-weight:700}
+.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+
+.stage{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:760px){.stage{grid-template-columns:minmax(0,1fr)}}
+
+/* phone */
+.phone{position:relative;background:var(--phone);border-radius:38px;padding:14px;max-width:360px;width:100%;margin-inline:auto;box-shadow:0 18px 40px -22px rgba(0,0,0,.45)}
+.screen{background:var(--phone-screen);border-radius:26px;min-height:470px;display:flex;flex-direction:column;overflow:hidden}
+.status{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.72rem;color:var(--muted);padding:10px 18px 0}
+.thread-head{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 12px 12px;border-bottom:1px solid var(--line)}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--bubble);display:grid;place-items:center;font-family:var(--mono);font-weight:700;color:var(--muted)}
+.sender{font-family:var(--mono);font-weight:700;font-size:.95rem;word-break:break-all;text-align:center}
+.thread{flex:1;padding:16px 14px;display:flex;flex-direction:column;gap:6px}
+.stamp-time{align-self:center;font-size:.72rem;color:var(--muted);font-family:var(--mono)}
+.bubble{align-self:flex-start;max-width:92%;background:var(--bubble);border-radius:18px 18px 18px 6px;padding:11px 14px;font-size:.98rem;line-height:1.45;overflow-wrap:anywhere}
+.lnk{color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:not-allowed}
+mark{background:none;color:inherit;border-radius:4px;padding:0 2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+mark.w{background:var(--fake-tint);box-shadow:inset 0 -2px 0 var(--fake)}
+mark.t{background:var(--real-tint);box-shadow:inset 0 -2px 0 var(--real)}
+mark.a{background:var(--amb-tint);box-shadow:inset 0 -2px 0 var(--amb)}
+
+.verdict-stamp{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg) scale(1);font-family:var(--mono);font-weight:700;font-size:2.4rem;letter-spacing:.12em;padding:6px 18px;border:4px solid currentColor;border-radius:10px;background:color-mix(in srgb,var(--phone-screen) 82%,transparent);pointer-events:none}
+.verdict-stamp.fake{color:var(--fake)} .verdict-stamp.real{color:var(--real)}
+.verdict-stamp.in{animation:stamp .32s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes stamp{from{transform:translate(-50%,-50%) rotate(-12deg) scale(1.8);opacity:0}to{transform:translate(-50%,-50%) rotate(-12deg) scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.verdict-stamp.in{animation:none}.bar i{transition:none}}
+
+/* panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel h2{font-family:var(--display);font-weight:600;font-size:1.35rem;margin:0;line-height:1.2}
+.prompt{color:var(--muted);margin:0}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn{font:600 1.05rem/1 var(--body);border-radius:12px;padding:16px 12px;border:2px solid transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--bg);color:var(--ink)}
+.btn small{font:500 .72rem var(--mono);color:var(--muted)}
+.btn.real{border-color:var(--real)} .btn.real:hover{background:var(--real-tint)}
+.btn.fake{border-color:var(--fake)} .btn.fake:hover{background:var(--fake-tint)}
+.btn:focus-visible,.cta:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btn[disabled]{opacity:.45;cursor:default}
+.cta{font:600 1rem/1 var(--body);background:var(--accent);color:var(--accent-ink);border:0;border-radius:12px;padding:15px 20px;cursor:pointer;align-self:flex-start}
+.result{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:1.5rem}
+.result.ok{color:var(--real)} .result.no{color:var(--fake)}
+.note{margin:0}
+.cues{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cues li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;align-items:baseline;font-size:.92rem}
+.tag{font:700 .68rem/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:5px 7px;border-radius:6px;white-space:nowrap}
+.tag.w{background:var(--fake-tint);color:var(--fake)} .tag.t{background:var(--real-tint);color:var(--real)} .tag.a{background:var(--amb-tint);color:var(--amb)}
+.cues q{font-family:var(--mono);font-size:.82rem;color:var(--muted);quotes:"“" "”"}
+.eyebrow{font:700 .72rem/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.keys{font:500 .75rem var(--mono);color:var(--muted)}
+kbd{font:inherit;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px}
+
+/* end screen */
+.end{display:flex;flex-direction:column;gap:18px}
+.score{font-family:var(--display);font-weight:800;font-size:clamp(3rem,10vw,5rem);line-height:.9;font-variant-numeric:tabular-nums}
+.score span{font-size:.4em;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:var(--bg);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h3{margin:0;font-family:var(--display);font-weight:600;font-size:1.1rem}
+.checklist{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.94rem}
+.missed{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;font-size:.94rem}
+.missed li{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.missed .n{font-family:var(--mono);color:var(--muted)}
+footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);padding-top:14px;display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+</style>
+
+<a href="index.html" class="homelink" style="display:inline-flex;align-items:center;gap:6px;font:600 .9rem system-ui,sans-serif;color:var(--accent);text-decoration:none;margin:0 auto 12px;max-width:1100px;width:100%;padding-top:env(safe-area-inset-top)">‹ Ana ekran</a>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Gerçek mi <span class="q">Sahte mi?</span></h1>
+      <p class="sub">Telefonuna gelen mesajı oku, kararını ver. Her cevaptan sonra mesajı ele veren dil işaretlerini göreceksin.</p>
+    </div>
+    <div class="meter" aria-live="polite">
+      <div>MESAJ<b id="mProg">1/10</b></div>
+      <div>DOĞRU<b id="mScore">0</b></div>
+    </div>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+
+  <main id="game" class="stage">
+    <div class="phone" aria-label="Telefon ekranı">
+      <div class="screen">
+        <div class="status"><span>14:02</span><span>SMS</span></div>
+        <div class="thread-head">
+          <div class="avatar" id="avatar">P</div>
+          <div class="sender" id="sender">PUSULAKARGO</div>
+        </div>
+        <div class="thread">
+          <div class="stamp-time">Bugün 14:02</div>
+          <div class="bubble" id="bubble"></div>
+        </div>
+      </div>
+      <div class="verdict-stamp" id="stamp" hidden></div>
+    </div>
+
+    <section class="panel" id="panel" aria-live="polite"></section>
+  </main>
+
+  <section id="endView" class="panel end" hidden></section>
+
+  <footer>
+    <span>Tüm mesajlar, kişi ve kurum adları kurgusaldır. Bağlantılar tıklanamaz.</span>
+  </footer>
+</div>
+
+<script>
+const TYPES = {"belirsiz": {"l": "Ne olduğu belli değil", "w": 1}, "tehdit": {"l": "Kayıp / ceza tehdidi", "w": 1}, "gonderen": {"l": "Gönderen uyuşmuyor", "w": 1}, "telefon": {"l": "Numarayı aratıyor", "w": 1}, "emir": {"l": "Hemen bir şey yaptırıyor", "w": 1}, "yazim": {"l": "Yazım hatası / bozuk ad", "w": 1}, "buyuk": {"l": "Gereksiz BÜYÜK HARF", "w": 1}, "benzer": {"l": "Kurum adına benzeyen adres", "w": 1}, "bilgi": {"l": "Kod / şifre / kart bilgisi istiyor", "w": 1}, "acil": {"l": "“Son gün”, “hemen”", "w": 2}, "karakter": {"l": "Türkçe karakter yok", "w": 2}, "kisa": {"l": "Kısaltılmış bağlantı", "w": 2}, "ad": {"l": "Adla hitap", "w": 2}, "odul": {"l": "Ödül / indirim", "w": 2}, "kodlar": {"l": "MERSİS, “RET yaz”, B kodu", "w": 2}, "somut": {"l": "Somut bilgi", "w": 0}, "resmi": {"l": "Kendi kanalınıza yönlendiriyor", "w": 0}, "uyari": {"l": "Güvenlik uyarısı", "w": 0}};
+// p = exact phrase in text, t = type
+const MSGS = [
+{
+"id": 1,
+"s": "+90 5XX 482 17 06",
+"fake": true,
+"x": "Pusula Kargo: koliniz adres eksikligi nedeniyle iade edilecektir.Tekrar gonderim icin adresinizi guncelleyiniz: pusula-teslimat.info/tr7",
+"f": [
+{
+"p": "+90 5XX 482 17 06",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "koliniz",
+"t": "belirsiz"
+},
+{
+"p": "eksikligi",
+"t": "karakter"
+},
+{
+"p": "iade edilecektir",
+"t": "tehdit"
+},
+{
+"p": "edilecektir.Tekrar",
+"t": "yazim"
+},
+{
+"p": "guncelleyiniz",
+"t": "emir"
+},
+{
+"p": "pusula-teslimat.info/tr7",
+"t": "benzer"
+}
+],
+"n": "Gönderen bir cep numarası, hangi koli olduğu yazmıyor; iade tehdidi ve “güncelleyiniz” emri bir arada. Adres kargo firmasının adına benziyor ama onun alan adı değil. Türkçe karakter eksikliği tek başına bir şey söylemez; asıl işaretler bunlar."
+},
+{
+"id": 2,
+"s": "PUSULAKARGO",
+"fake": false,
+"x": "Degerli musterimiz, Lale Market tarafindan gonderilen 7341**** takip numarali kargonuz dagitima cikmistir. Takip icin: pusula.ly/k7Rt B001",
+"f": [
+{
+"p": "musterimiz",
+"t": "karakter"
+},
+{
+"p": "Lale Market tarafindan gonderilen 7341**** takip numarali",
+"t": "somut"
+},
+{
+"p": "pusula.ly/k7Rt",
+"t": "kisa"
+},
+{
+"p": "B001",
+"t": "kodlar"
+}
+],
+"n": "Türkçe karakter yok ve bağlantı kısaltılmış; gerçek kargo mesajlarında ikisi de sık görülür. Gönderen kargo firmasının adı, takip numarası ve gönderen mağaza yazıyor; tehdit ya da emir yok. Yine de bağlantı yerine firmanın uygulamasından takip etmek en güvenlisi."
+},
+{
+"id": 3,
+"s": "ANKA BNK",
+"fake": true,
+"x": "[Anka Bank] Hesabınıza yetkisiz giriş tespit edildi, hesabınız askıya alındı. Hesabınızı onaylamak için giriş yapın: anka-bank-onay.com",
+"f": [
+{
+"p": "ANKA BNK",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "Hesabınıza yetkisiz giriş",
+"t": "belirsiz"
+},
+{
+"p": "hesabınız askıya alındı",
+"t": "tehdit"
+},
+{
+"p": "giriş yapın",
+"t": "emir"
+},
+{
+"p": "anka-bank-onay.com",
+"t": "benzer"
+}
+],
+"n": "Yazım hatası yok, Türkçe karakterler tam: düzgün yazılmış olması gerçek olduğunu göstermez. Gönderen adı bankanın adı değil, hangi giriş olduğu belirsiz; “askıya alındı” tehdidi ve “giriş yapın” emri var."
+},
+{
+"id": 4,
+"s": "ANKABANK",
+"fake": false,
+"x": "Sayın Mert K., **4417 ile biten kartınızla 01.10.2026 tarihinde 1.249,90 TL harcama yapıldı. İşlem size ait değilse kartınızın arkasındaki numaradan bizi arayın. B002",
+"f": [
+{
+"p": "Sayın Mert K.",
+"t": "ad"
+},
+{
+"p": "**4417 ile biten kartınızla",
+"t": "somut"
+},
+{
+"p": "1.249,90 TL",
+"t": "somut"
+},
+{
+"p": "kartınızın arkasındaki numaradan",
+"t": "resmi"
+},
+{
+"p": "B002",
+"t": "kodlar"
+}
+],
+"n": "Hangi kart, hangi tarih, ne kadar: hepsi yazıyor. Sizi mesajdaki bir numaraya değil, kartınızın arkasındaki numaraya yönlendiriyor."
+},
+{
+"id": 5,
+"s": "BKMTRL",
+"fake": true,
+"x": "K.A.M.U K.A.P.I.S.I Adiniza kayitli 2.150 TL iadeniz onaylanmistir. Basvuru icin kart bilgilerinizi girin: kmk-iade.net B030",
+"f": [
+{
+"p": "BKMTRL",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "K.A.M.U K.A.P.I.S.I",
+"t": "yazim"
+},
+{
+"p": "kayitli",
+"t": "karakter"
+},
+{
+"p": "2.150 TL iadeniz",
+"t": "odul"
+},
+{
+"p": "iadeniz onaylanmistir",
+"t": "belirsiz"
+},
+{
+"p": "kart bilgilerinizi girin",
+"t": "bilgi"
+},
+{
+"p": "kmk-iade.net",
+"t": "benzer"
+},
+{
+"p": "B030",
+"t": "kodlar"
+}
+],
+"n": "Kart bilgisi isteniyor: bu tek başına yeterli, mesaj sahtedir. Kurum adı harf harf bozulmuş, gönderen anlamsız bir ad. Sondaki “B030” kodu gerçek ticari mesajları taklit ediyor; güven işareti değil."
+},
+{
+"id": 6,
+"s": "KAMUKAPISI",
+"fake": false,
+"x": "Kamu Kapısı'na 01.10.2026 13:42'de giriş yapıldı. Bu giriş size ait değilse şifrenizi kamukapisi.gov.tr adresinden değiştirin. Şifrenizi kimseyle paylaşmayın. B016",
+"f": [
+{
+"p": "01.10.2026 13:42'de",
+"t": "somut"
+},
+{
+"p": "kamukapisi.gov.tr adresinden",
+"t": "resmi"
+},
+{
+"p": "Şifrenizi kimseyle paylaşmayın",
+"t": "uyari"
+},
+{
+"p": "B016",
+"t": "kodlar"
+}
+],
+"n": "Tarih ve saat veriyor; şifre istemiyor, tersine paylaşmayın diyor. Yönlendirdiği adres kurumun kendi alan adı."
+},
+{
+"id": 7,
+"s": "LALEREKLAM",
+"fake": true,
+"x": "Sn. Elif Yılmaz dosyanizin son gunudur. Magdur olmamak icin 17:00'a kadar arayiniz. Akasya Hukuk: 0216 XXX XX XX RED yaz 4609 a gonder B251",
+"f": [
+{
+"p": "LALEREKLAM",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "Sn. Elif Yılmaz",
+"t": "ad"
+},
+{
+"p": "dosyanizin",
+"t": "belirsiz"
+},
+{
+"p": "son gunudur",
+"t": "acil"
+},
+{
+"p": "Magdur olmamak icin",
+"t": "tehdit"
+},
+{
+"p": "arayiniz",
+"t": "telefon"
+},
+{
+"p": "17:00'a kadar arayiniz",
+"t": "emir"
+},
+{
+"p": "RED yaz 4609 a gonder",
+"t": "kodlar"
+}
+],
+"n": "Bağlantı yok, numara var: sahte mesajların üçte biri sizi aratır. Hangi dosya olduğu yazmıyor, gönderen bir reklam şirketi. Adınızın yazılması ve “RED yaz” ifadesi mesajın gerçek olduğunu göstermez."
+},
+{
+"id": 8,
+"s": "MAVIHAT",
+"fake": false,
+"x": "Değerli abonemiz, Ekim ayı faturanız 389,50 TL olarak oluşmuştur. Son ödeme tarihi 15.10.2026'dır. Detaylar Mavi Hat uygulamasında. B003",
+"f": [
+{
+"p": "Ekim ayı faturanız 389,50 TL",
+"t": "somut"
+},
+{
+"p": "15.10.2026'dır",
+"t": "somut"
+},
+{
+"p": "Mavi Hat uygulamasında",
+"t": "resmi"
+},
+{
+"p": "B003",
+"t": "kodlar"
+}
+],
+"n": "“Değerli abonemiz” gibi genel bir hitap gerçek mesajlarda da çok sık. Tutar ve tarih yazıyor; bağlantı yerine uygulamaya yönlendiriyor."
+},
+{
+"id": 9,
+"s": "+44 7XXX 902 113",
+"fake": true,
+"x": "SN.K.U.Z.E.Y kullanicisi hesabinizi onaylamazsaniz varliklariniz 'BLOKE' Edilecektir. Onay icin: bb.vg/kzy-onay",
+"f": [
+{
+"p": "+44 7XXX 902 113",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "K.U.Z.E.Y",
+"t": "yazim"
+},
+{
+"p": "kullanicisi",
+"t": "karakter"
+},
+{
+"p": "hesabinizi",
+"t": "belirsiz"
+},
+{
+"p": "'BLOKE' Edilecektir",
+"t": "tehdit"
+},
+{
+"p": "'BLOKE'",
+"t": "buyuk"
+},
+{
+"p": "bb.vg/kzy-onay",
+"t": "kisa"
+}
+],
+"n": "Yabancı bir numara, harf harf bozulmuş bir platform adı ve büyük harfle “BLOKE” tehdidi. Filtrelerden kaçmak için ad bilerek bozulur."
+},
+{
+"id": 10,
+"s": "LALEMARKET",
+"fake": false,
+"x": "Lale Market'te ayin son firsati! Tum meyve-sebzede %20 indirim. Son gun 4 Ekim! bit.ly/LaleEkim SMS almak istemiyorsaniz RET yazip 4577'ye gonderebilirsiniz. Mersis: 0123456789000010 B002",
+"f": [
+{
+"p": "ayin son firsati",
+"t": "karakter"
+},
+{
+"p": "%20 indirim",
+"t": "odul"
+},
+{
+"p": "Son gun 4 Ekim!",
+"t": "acil"
+},
+{
+"p": "bit.ly/LaleEkim",
+"t": "kisa"
+},
+{
+"p": "Mersis: 0123456789000010",
+"t": "kodlar"
+}
+],
+"n": "Son gün, indirim, kısa bağlantı, Türkçe karakter yok: bunların hepsi gerçek kampanya mesajlarında da sık görülür. Gönderen mağazanın adı; tehdit yok, sizden bilgi istenmiyor."
+},
+{
+"id": 11,
+"s": "+90 850 XXX 12 45",
+"fake": true,
+"x": "Sayin; Lale Market musterisi olarak 500 TL alisveris ceki kazandiniz! Sadece ilk 100 kisi icin gecerli. Hemen alin: kisa.lnk/LaLe500",
+"f": [
+{
+"p": "+90 850 XXX 12 45",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "musterisi olarak",
+"t": "belirsiz"
+},
+{
+"p": "500 TL alisveris ceki kazandiniz",
+"t": "odul"
+},
+{
+"p": "Sadece ilk 100 kisi",
+"t": "acil"
+},
+{
+"p": "Hemen alin",
+"t": "emir"
+},
+{
+"p": "kisa.lnk/LaLe500",
+"t": "kisa"
+}
+],
+"n": "Ödül ve “hemen” tek başına karar verdirmez; gerçek kampanyalarda da var. Burada gönderen mağazanın adı değil, hangi alışverişten kazanıldığı belli değil ve hemen tıklamanız isteniyor."
+},
+{
+"id": 12,
+"s": "ANKABANK",
+"fake": false,
+"x": "Anka Bank internet şubesi giriş şifreniz: 482913. Bu şifreyi banka çalışanları dahil kimseyle paylaşmayın. B001",
+"f": [
+{
+"p": "kimseyle paylaşmayın",
+"t": "uyari"
+},
+{
+"p": "B001",
+"t": "kodlar"
+}
+],
+"n": "Kendi istediğiniz bir giriş için gelen tek kullanımlık şifre. Şifre vermek ile şifre istemek farklıdır: banka asla “bu kodu bize iletin” demez."
+},
+{
+"id": 13,
+"s": "+90 5XX 734 08 21",
+"fake": true,
+"x": "Anne telefonum bozuldu bu yeni numaram. Acil bi ödeme yapmam lazim, kimseye söyleme. Müsait olunca yaz",
+"f": [
+{
+"p": "+90 5XX 734 08 21",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "bi ödeme yapmam lazim",
+"t": "yazim"
+},
+{
+"p": "bi ödeme",
+"t": "belirsiz"
+},
+{
+"p": "Acil",
+"t": "acil"
+},
+{
+"p": "Müsait olunca yaz",
+"t": "emir"
+}
+],
+"n": "Kurum değil “tanıdık” taklidi. Hangi ödeme olduğu belli değil, “kimseye söyleme” diye gizlilik isteniyor. Yanıt vermeden önce kişiyi eski numarasından arayın."
+},
+{
+"id": 14,
+"s": "KAMUKAPISI",
+"fake": false,
+"x": "DEGERLI SIGORTALIMIZ, GENEL SAGLIK SIGORTASI PRIM BORCUNUZ BULUNMAKTADIR. BORCUNUZU KAMU KAPISI UZERINDEN SORGULAYIP ODEYEBILIRSINIZ. AKSI TAKDIRDE YASAL TAKIP BASLATILACAKTIR. B002",
+"f": [
+{
+"p": "DEGERLI SIGORTALIMIZ",
+"t": "buyuk"
+},
+{
+"p": "SIGORTASI",
+"t": "karakter"
+},
+{
+"p": "PRIM BORCUNUZ BULUNMAKTADIR",
+"t": "belirsiz"
+},
+{
+"p": "YASAL TAKIP BASLATILACAKTIR",
+"t": "tehdit"
+},
+{
+"p": "KAMU KAPISI UZERINDEN",
+"t": "resmi"
+}
+],
+"n": "Gerçek bir mesaj da şüpheli görünebilir: kart burada 3 uyarı verir. Doğru davranış yine aynı: mesajda bağlantı ya da numara yok; Kamu Kapısı’na kendiniz girip borcu kontrol edersiniz."
+},
+{
+"id": 15,
+"s": "+90 850 XXX 31 70",
+"fake": true,
+"x": "ANKA BANK GUVENLIK: Kartiniz bloke edilmistir. Musteri temsilcimiz sizi arayacaktir, SMS ile gelen kodu temsilciye iletiniz.",
+"f": [
+{
+"p": "+90 850 XXX 31 70",
+"t": "gonderen",
+"sender": true
+},
+{
+"p": "ANKA BANK GUVENLIK",
+"t": "buyuk"
+},
+{
+"p": "Kartiniz bloke edilmistir",
+"t": "tehdit"
+},
+{
+"p": "SMS ile gelen kodu temsilciye iletiniz",
+"t": "bilgi"
+},
+{
+"p": "iletiniz",
+"t": "emir"
+}
+],
+"n": "Bağlantı olmaması güvenli olduğu anlamına gelmez. Banka çalışanları SMS kodu istemez; bu mesaj dolandırıcının yapacağı aramanın hazırlığı."
+},
+{
+"id": 16,
+"s": "KAMUKAPISI",
+"fake": false,
+"x": "Sayın Ahmet D., motorlu taşıtlar vergisi 2. taksit son ödeme tarihi 31.10.2026'dır. Borç sorgulama için kamukapisi.gov.tr adresini tarayıcınıza kendiniz yazın; size bağlantı gönderilmez.",
+"f": [
+{
+"p": "Sayın Ahmet D.",
+"t": "ad"
+},
+{
+"p": "motorlu taşıtlar vergisi 2. taksit",
+"t": "somut"
+},
+{
+"p": "31.10.2026",
+"t": "somut"
+},
+{
+"p": "tarayıcınıza kendiniz yazın; size bağlantı gönderilmez",
+"t": "resmi"
+}
+],
+"n": "Son ödeme tarihi bir baskı değil, bilgi. Mesaj tıklanacak bağlantı vermiyor; adresi kendiniz yazmanızı öğütlüyor."
+}
+];
+const ROUND = 10;
+const CARD = ["Ne olduğu belli değil mi? (hangi dosya, hangi sipariş, ne kadar borç)", "Kayıpla ya da cezayla korkutuyor mu?", "Gönderen adı kurumla uyuşmuyor mu?", "Bir numarayı aramanızı mı istiyor?", "Hemen bir şey yapmanızı mı istiyor? (tıklayın, giriş yapın)", "Yazım hatası ya da bozuk marka adı var mı?", "Gereksiz BÜYÜK HARF var mı?"];
+
+const $ = id => document.getElementById(id);
+let S = null;
+
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function newRound(){
+  const fakes=shuffle(MSGS.filter(m=>m.fake)).slice(0,ROUND/2), reals=shuffle(MSGS.filter(m=>!m.fake)).slice(0,ROUND/2);
+  return {order:shuffle(fakes.concat(reals)).map(m=>m.id), i:0, score:0, answered:null, log:[]};
+}
+const esc = s => s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cls = t => ({1:"w",2:"a",0:"t"})[TYPES[t].w];
+const isLink = p => /\.(com|net|info|tr|lnk)\b|\//.test(p) && !/\s/.test(p);
+
+function markup(m, reveal){
+  const text=m.x, spans=[];
+  if(reveal){
+    m.f.filter(f=>!f.sender).forEach(f=>{const at=text.indexOf(f.p); if(at>=0) spans.push({a:at,b:at+f.p.length,t:f.t})});
+  }
+  // link-like tokens always look like links
+  const re=/[a-z0-9-]+(\.[a-z0-9-]+)+(\/[A-Za-z0-9]+)?/g; let mm; const links=[];
+  while((mm=re.exec(text))){ if(/\.(com|net|info|tr|lnk|ly|vg|biz)/.test(mm[0]) && !/^\d/.test(mm[0])) links.push({a:mm.index,b:mm.index+mm[0].length}); }
+  spans.sort((x,y)=>x.a-y.a);
+  const clean=[]; let end=-1; spans.forEach(s=>{if(s.a>=end){clean.push(s);end=s.b}});
+  let out="", pos=0;
+  const wrapLinks=(seg,off)=>{ let r="",p=0; links.forEach(l=>{ if(l.a>=off && l.b<=off+seg.length){ r+=esc(seg.slice(p,l.a-off))+'<span class="lnk" title="Bağlantılar bu oyunda tıklanamaz">'+esc(seg.slice(l.a-off,l.b-off))+'</span>'; p=l.b-off; } }); return r+esc(seg.slice(p)); };
+  clean.forEach(s=>{
+    out+=wrapLinks(text.slice(pos,s.a),pos);
+    const c=cls(s.t);
+    out+=`<mark class="${c}" title="${TYPES[s.t].l}">`+wrapLinks(text.slice(s.a,s.b),s.a)+"</mark>";
+    pos=s.b;
+  });
+  return out+wrapLinks(text.slice(pos),pos);
+}
+
+function current(){return MSGS.find(m=>m.id===S.order[S.i])}
+function initials(s){return /^\+/.test(s)?"#":s.replace(/[^A-Za-zÇĞİÖŞÜ]/g,"").slice(0,1).toUpperCase()}
+
+function renderMeter(){
+  $("mProg").textContent=`${Math.min(S.i+1,ROUND)}/${ROUND}`;
+  $("mScore").textContent=S.score;
+  $("bar").style.width=((S.i+(S.answered===null?0:1))/ROUND*100)+"%";
+}
+
+function renderQuestion(){
+  const m=current();
+  $("sender").textContent=m.s; $("avatar").textContent=initials(m.s);
+  $("bubble").innerHTML=markup(m,false);
+  const st=$("stamp"); st.hidden=true; st.className="verdict-stamp";
+  $("panel").innerHTML=`
+    <span class="eyebrow">Mesaj ${S.i+1}</span>
+    <h2>Bu mesaj gerçek mi, sahte mi?</h2>
+    <p class="prompt">Gönderen adına, hitaba, istenen şeye ve bağlantıya dikkat et.</p>
+    <div class="choices">
+      <button class="btn real" id="bReal" type="button">Gerçek<small>← sol ok</small></button>
+      <button class="btn fake" id="bFake" type="button">Sahte<small>sağ ok →</small></button>
+    </div>
+    <span class="keys">Sınıfta projeksiyonla oynarken klavye okları da çalışır.</span>`;
+  $("bReal").onclick=()=>answer(false); $("bFake").onclick=()=>answer(true);
+  renderMeter();
+}
+
+function answer(saidFake){
+  if(S.answered!==null) return;
+  const m=current(), ok=saidFake===m.fake;
+  S.answered=saidFake; if(ok) S.score++;
+  S.log.push({id:m.id, ok});
+  renderFeedback(true);
+}
+
+function renderFeedback(animate){
+  const m=current(), ok=S.answered===m.fake;
+  $("bubble").innerHTML=markup(m,true);
+  const st=$("stamp"); st.hidden=false; st.textContent=m.fake?"SAHTE":"GERÇEK";
+  st.className="verdict-stamp "+(m.fake?"fake":"real")+(animate?" in":"");
+  const warn=m.f.filter(f=>TYPES[f.t].w===1), amb=m.f.filter(f=>TYPES[f.t].w===2), trust=m.f.filter(f=>TYPES[f.t].w===0);
+  const score=new Set(warn.filter(f=>f.t!=="benzer"&&f.t!=="bilgi").map(f=>f.t)).size, kod=warn.some(f=>f.t==="bilgi");
+  const li=f=>`<li><span class="tag ${cls(f.t)}">${TYPES[f.t].l}</span><q>${esc(f.p)}</q></li>`;
+  const last=S.i===ROUND-1;
+  $("panel").innerHTML=`
+    <div class="result ${ok?"ok":"no"}">${ok?"Doğru bildin.":"Bu sefer olmadı."}</div>
+    <p class="note">Bu mesaj <b>${m.fake?"sahte":"gerçek"}</b>. ${esc(m.n)}</p>
+    ${warn.length?`<div><div class="eyebrow" style="margin-bottom:8px">Uyarı işaretleri</div><ul class="cues">${warn.map(li).join("")}</ul></div>`:""}
+    ${amb.length?`<div><div class="eyebrow" style="margin-bottom:8px">Yanıltıcı işaretler (gerçek mesajlarda da sık)</div><ul class="cues">${amb.map(li).join("")}</ul></div>`:""}
+    <p class="note" style="font-size:.92rem"><b>Kontrol kartı:</b> ${kod?"Kod, şifre ya da kart bilgisi istiyor: tek başına sahte demektir.":`7 sorudan ${score} “evet” → ${score>=3?"şüpheli":"şüpheli değil"}.`}</p>
+    ${trust.length?`<div><div class="eyebrow" style="margin-bottom:8px">Güven işaretleri</div><ul class="cues">${trust.map(li).join("")}</ul></div>`:""}
+    <button class="cta" id="bNext" type="button">${last?"Sonucu gör":"Sonraki mesaj"}</button>
+    <span class="keys"><kbd>Enter</kbd> ile de geçebilirsin.</span>`;
+  $("bNext").onclick=next; $("bNext").focus({preventScroll:true});
+  renderMeter();
+}
+
+function next(){
+  if(S.answered===null) return;
+  S.i++; S.answered=null;
+  if(S.i>=ROUND) return renderEnd();
+  renderQuestion();
+}
+
+function renderEnd(){
+  $("game").hidden=true; const v=$("endView"); v.hidden=false;
+  $("mProg").textContent=`${ROUND}/${ROUND}`; $("mScore").textContent=S.score; $("bar").style.width="100%";
+  const missed={}; let fooledFake=0, falseAlarm=0;
+  S.log.filter(l=>!l.ok).forEach(l=>{const m=MSGS.find(x=>x.id===l.id); if(m.fake){fooledFake++; m.f.filter(f=>TYPES[f.t].w===1).forEach(f=>missed[f.t]=(missed[f.t]||0)+1)} else falseAlarm++;});
+  const mlist=Object.entries(missed).sort((a,b)=>b[1]-a[1]);
+  let best=null; try{best=Number(localStorage.getItem("gms-best"))||null; if(!best||S.score>best){localStorage.setItem("gms-best",S.score)}}catch(e){}
+  const msg=S.score>=9?"Dolandırıcıların işi seninle zor.":S.score>=7?"İyi bir göz. Birkaç işaret daha öğrenince tam olacak.":"Bu işaretleri bir kez öğrenmek, bir sonraki mesajda fark yaratır.";
+  v.innerHTML=`
+    <span class="eyebrow">Tur tamamlandı</span>
+    <div class="score">${S.score}<span> / ${ROUND}</span></div>
+    <p class="note">${msg}${best&&best>S.score?` En iyi skorun: ${best}.`:""}</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>Nerede yanıldın?</h3>
+        <ul class="missed">
+          <li><span>Gözden kaçan sahte mesaj</span><span class="n">${fooledFake}</span></li>
+          <li><span>Sahte sanılan gerçek mesaj</span><span class="n">${falseAlarm}</span></li>
+        </ul>
+        ${mlist.length?`<div class="eyebrow">Kaçırdığın sahte mesajlardaki işaretler</div><ul class="cues">${mlist.map(([t,n])=>`<li><span class="tag w">${TYPES[t].l}</span><span>${n} kez</span></li>`).join("")}</ul>`:`<p class="note">Hiçbir sahte mesajı kaçırmadın.</p>`}
+        ${falseAlarm?`<p class="note" style="font-size:.9rem;color:var(--muted)">Gerçek mesajları sahte sanmak da bir hata türü: tek bir işaret görüp karar vermek yerine işaretleri birlikte değerlendir.</p>`:""}
+      </div>
+      <div class="card">
+        <h3>Sahte Mesaj Kontrol Kartı</h3>
+        <ol class="checklist">${CARD.map(c=>`<li>${c}</li>`).join("")}</ol>
+        <p class="note" style="font-size:.9rem;color:var(--muted)">3 veya daha fazla “evet” varsa mesaj şüphelidir. Kod, şifre ya da kart bilgisi isteyen mesaj tek başına sahtedir. Bağlantıya tıklama, numarayı arama; kurumu kendi bildiğin kanaldan kontrol et.</p>
+      </div>
+    </div>
+    <button class="cta" id="bAgain" type="button">Yeniden oyna (farklı mesajlar)</button>`;
+  $("bAgain").onclick=()=>{S=newRound(); v.hidden=true; $("game").hidden=false; renderQuestion(); window.scrollTo({top:0})};
+  $("bAgain").focus({preventScroll:true});
+}
+
+document.addEventListener("keydown",e=>{
+  if(!S || $("game").hidden) return;
+  if(S.answered===null){ if(e.key==="ArrowLeft") answer(false); else if(e.key==="ArrowRight") answer(true); }
+  else if(e.key==="Enter" && document.activeElement?.id!=="bNext"){ e.preventDefault(); next(); }
+});
+
+function start(data){
+  S = (data && data.S && Array.isArray(data.S.order)) ? data.S : newRound();
+  if(S.i>=ROUND) return renderEnd();
+  S.answered===null ? renderQuestion() : renderFeedback(false);
+}
+window.claude?.hot?.snapshot?.(()=>({S}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}</script>
+</body></html>
